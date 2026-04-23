@@ -1,12 +1,7 @@
 ======================================================================
-会话开始: 2026-04-23 10:57:28.476409
-执行的脚本: app0423.py
-Python路径: C:\Users\Lenovo\.conda\envs\kgllm\python.exe
-======================================================================
-======================================================================
-会话开始: 2026-04-23 10:57:28.476409
-执行的脚本: app0423.py
-Python路径: C:\Users\Lenovo\.conda\envs\kgllm\python.exe
+Session Start: 2026-04-23 10:57:28.476409
+Executed Script: app0423.py
+Python Path: C:\Users\Lenovo\.conda\envs\kgllm\python.exe
 ======================================================================
 
 ✅ LangChain Graph RAG connected successfully!
@@ -195,6 +190,6 @@ Full Context:
 > Finished chain.
 🔍 Extracted graph keyword for visualization: flue-gas desulfurization
 ======================================================================
-会话结束: 2026-04-23 11:15:12.878113
-退出代码: 1
+Session End: 2026-04-23 11:15:12.878113
+Exit Code: 1
 ======================================================================
