@@ -1,4 +1,4 @@
-# prompts.py - 钢铁行业VOC排放知识图谱提取提示词
+# prompts.py
 PROMPT_DISCOVERY = """You are an expert information-extraction model specialized in scientific and technical texts
 about VOC emissions in the steel industry.
 
