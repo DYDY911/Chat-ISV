@@ -30,23 +30,23 @@ NEO4J_DATABASE_NAME = "e554e789"
 # 2. Database Initialization (LangChain RAG)
 # ==========================================
 try:
-    # 💡 针对可视化驱动的防掉线配置
+    # 💡 Anti-disconnection configuration for the visualization driver
     neo4j_driver = GraphDatabase.driver(
         NEO4J_URI, 
         auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-        keep_alive=True,               # 开启 TCP 心跳包，告诉云端“我还在，别踢我”
-        max_connection_lifetime=180    # 连接池里的线如果超过 3 分钟，强制丢弃换新线
+        keep_alive=True,               # Enable TCP keep-alive to prevent cloud timeouts
+        max_connection_lifetime=180    # Force connection refresh if alive for more than 3 minutes
     )
 
-    # 💡 针对 LangChain 图谱查询的防掉线配置
-    # 注意：很多版本的 LangChain 支持把配置传给底层驱动，如果没有 timeout 也会尽量重试
+    # 💡 Anti-disconnection configuration for LangChain graph queries
+    # Note: Many LangChain versions support passing configs to the underlying driver, attempting retries on timeout.
     graph = Neo4jGraph(
         url=NEO4J_URI,
         username=NEO4J_USERNAME,
         password=NEO4J_PASSWORD,
         database=NEO4J_DATABASE_NAME
     )
-    # 如果你的 langchain 版本比较新，可以强制刷新一下 schema 唤醒它
+    # Force refresh schema to wake up the connection if using a newer LangChain version
     graph.refresh_schema()
     
     print("✅ LangChain Graph RAG connected successfully!")
@@ -95,7 +95,7 @@ def get_graph_chain(api_key: str, base_url: str):
         
     llm = ChatOpenAI(**llm_kwargs)
 
-# 🚀 更新后的第 2 条规则（加入 toString 强转机制）
+    # 🚀 Updated Rule 2 (Added toString type casting mechanism)
     cypher_template = """You are a Neo4j Cypher expert. Convert the user's question into a Cypher query.
 Use only the provided schema. Do NOT wrap the Cypher query in markdown block formatting (e.g. ```cypher ... ```). 
 Just return the raw Cypher query string.
@@ -117,7 +117,8 @@ Question:
 
 Cypher query:"""
     cypher_prompt = PromptTemplate(template=cypher_template, input_variables=["schema", "question"])
-# 🚀 优化：QA Prompt (支持动态领域泛化与智能收敛)
+
+    # 🚀 Optimization: QA Prompt (Supports dynamic domain generalization and intelligent convergence)
     qa_template = """You are an authoritative environmental engineering and materials science expert.
     Please synthesize a highly professional, fluent English answer strictly based on the provided [Context] retrieved from the domain knowledge graph.
     
@@ -136,7 +137,8 @@ Cypher query:"""
 
     Professional Answer:"""
     qa_prompt = PromptTemplate(template=qa_template, input_variables=["context", "question"])
-# 🚀 3. 将两个 Prompt 一起装载进 Chain
+
+    # 🚀 3. Load both Prompts into the Chain
     kg_rag_chain = GraphCypherQAChain.from_llm(
         cypher_llm=llm,
         qa_llm=llm,
@@ -145,9 +147,10 @@ Cypher query:"""
         cypher_prompt=cypher_prompt, 
         qa_prompt=qa_prompt,  
         allow_dangerous_requests=True,
-        top_k=100  # <--- 🔥 解除封印！允许向 QA 模型传递最多 100 条上下文！
+        top_k=100  # <--- 🔥 Unlocked! Allow passing up to 100 context records to the QA model!
     )
     return kg_rag_chain
+
 # ==========================================
 # 4. 🕸️ Core Visualization Function: Generate Pyvis HTML
 # ==========================================
@@ -187,7 +190,7 @@ def generate_vis_subgraph_html(message, api_key, base_url):
         'ControlTech': '#F7819F', 
         'VOCSpecies': '#81BEF7',  
         'EmissionSource': '#F5D76E', 
-        'Process': '#ABEBC6',      
+        'Process': '#ABEBC6',       
         'Chunk': '#E5E7E9',        
         'Method': '#D7BDE2'        
     }
@@ -301,7 +304,7 @@ def answer_question(message, history, api_key, base_url):
         print(f"Graph tier error: {e}")
         final_answer = "Not found"
 
-# --- [Tier 2: Local Vector Database with VISIBLE THINKING] ---
+    # --- [Tier 2: Local Vector Database with VISIBLE THINKING] ---
     if final_answer.strip().strip('"').strip("'") == "Not found":
         
         history[-1]["content"] = f"📖 [2/3] Graph missed. Utilizing high-dimensional semantic search on the local vector database..."
@@ -317,10 +320,10 @@ def answer_question(message, history, api_key, base_url):
                     yield history
                     time.sleep(1) # Pause to simulate processing time
                     
-                    # 💡 注意这里：变量名是 local_context
+                    # 💡 Note here: The variable name is local_context
                     local_context = "\n\n".join([f"[{d.metadata.get('title', 'Unknown')}] {d.page_content[:800]}" for d in docs])
                     
-                    # 🚀 优化：同步第二环节的动态泛化规则，修复变量名与逃生暗号
+                    # 🚀 Optimization: Sync dynamic generalization rules from tier 2, fix variable names and escape hatch
                     judge_prompt = f"""You are an authoritative environmental engineering expert. 
 Your task is to answer the user's question '{message}' based ONLY on the provided documents.
 
@@ -339,7 +342,7 @@ Professional Answer:"""
                     
                     local_answer = llm.invoke(judge_prompt).content.strip()
 
-                    # 💡 代码靠识别 "PASS" 来决定是否抛给维基百科
+                    # 💡 Code identifies "PASS" to determine whether to fallback to Wikipedia
                     if local_answer.upper() != "PASS" and not local_answer.upper().startswith("PASS"):
                         final_answer = f"**📚 [Local DB] Answer formulated based on domain-specific literature:**\n\n{local_answer}"
                         local_hit = True
@@ -353,6 +356,7 @@ Professional Answer:"""
                     time.sleep(1)
         except Exception as e:
             print(f"Vector tier error: {e}")
+            
     # --- [Tier 3: Wikipedia] ---
     if not local_hit and final_answer.strip().strip('"').strip("'") == "Not found":
         history[-1]["content"] += "\n\n🌐 [3/3] Calling Wikipedia API for global knowledge fallback..."
