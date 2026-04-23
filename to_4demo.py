@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Neo4j 导入脚本（KG + Chunk-RAG 版）
+Neo4j 
 """
 
 import json
@@ -13,11 +13,11 @@ from typing import Dict, Any, Optional
 from neo4j import GraphDatabase, basic_auth
 from tqdm import tqdm
 
-# ==================== 配置 ====================
-JSONL_PATH = Path(r"D:\\VOCs钢铁\数据产出\\kgdemoup\demo1\\llmpdf_extracted.clean.jsonl")
-NEO4J_URI  = "bolt://127.0.0.1:7687"
+# ========================================
+JSONL_PATH = Path(r"D:\\X\X\\X\X\\llmpdf_extracted.clean.jsonl")
+NEO4J_URI  = "bolt://XXXXXXXX"
 NEO4J_USER = "neo4j"
-NEO4J_PASS = "091227dingyu@"
+NEO4J_PASS = "XXXXXXXXX"
 BATCH_SIZE = 200
 # ==============================================
 
@@ -47,7 +47,6 @@ def ensure_chunk(tx, chunk_id: str, doc_id: str, text: str):
             text=text
         )
     else:
-        # 空文本时不写 text，防止覆盖
         tx.run(
             """
             MERGE (c:Chunk {chunk_id: $cid})
@@ -78,7 +77,6 @@ def ensure_entity(tx, label: str, payload: Dict[str, Any], chunk_id: str):
         "source_doc": payload.get("provenance", {}).get("doc_id")
     }
 
-    # Neo4j 不支持 map → 全部转字符串
     props = {k: v for k, v in props.items() if v is not None}
 
     tx.run(
@@ -89,8 +87,6 @@ def ensure_entity(tx, label: str, payload: Dict[str, Any], chunk_id: str):
         name=name,
         props=props
     )
-
-    # 🔑 强制连 Chunk（RAG 核心）——统一方向：Chunk -> Entity
     query = f"""
     MATCH (n:{label} {{name: $name}})
     MATCH (c:Chunk {{chunk_id: $cid}})
@@ -152,9 +148,6 @@ def merge_relation(tx, head, rel, tail, props):
 def ingest_record(tx, rec: Dict[str, Any]):
     doc_id = rec.get("doc_id")
 
-    # ===============================
-    # ✅ 核心修复：从 evidence 构造 Chunk 文本
-    # ===============================
     evidence_texts = []
 
     def collect_text(t):
@@ -166,28 +159,23 @@ def ingest_record(tx, rec: Dict[str, Any]):
           for x in t:
             if isinstance(x, str) and x.strip():
                 evidence_texts.append(x.strip())
-# 1️⃣ 来自实体
+# 1️⃣ 
     for ents in (rec.get("entities") or {}).values():
      for e in ents or []:
         if isinstance(e, dict):
             collect_text(e.get("evidence_span"))
-# 2️⃣ 来自关系
+# 2️⃣ 
     for r in rec.get("relations") or []:
      collect_text(r.get("evidence_text"))
-    # 3️⃣ 拼成 Chunk 正文
-    chunk_text = "\n".join(dict.fromkeys(evidence_texts))  # 去重但保序
+    # 3️⃣ 
+    chunk_text = "\n".join(dict.fromkeys(evidence_texts))  
 
     if not chunk_text:
-        # ⚠️ 没有任何证据文本 → 不创建 Chunk
         return
-
-    # ✅ Chunk 唯一 ID（避免覆盖）
     chunk_id = doc_id
 
     ensure_chunk(tx, chunk_id, doc_id, chunk_text)
 
-    # ===============================
-    # 实体 + Chunk 连接
     # ===============================
     for label, ents in (rec.get("entities") or {}).items():
         if label not in ENTITY_LABELS:
@@ -196,8 +184,6 @@ def ingest_record(tx, rec: Dict[str, Any]):
             if isinstance(e, dict):
                 ensure_entity(tx, label, e, chunk_id)
 
-    # ===============================
-    # 实体关系
     # ===============================
     for r in rec.get("relations") or []:
         merge_relation(
@@ -234,7 +220,7 @@ def main():
                 session.execute_write(lambda tx: [ingest_record(tx, r) for r in buf])
 
     driver.close()
-    print("✅ KG + Chunk-RAG 导入完成")
+    print("✅ finish")
 
 if __name__ == "__main__":
     main()
