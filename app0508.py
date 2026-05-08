@@ -30,23 +30,21 @@ NEO4J_DATABASE_NAME = "e554e789"
 # 2. Database Initialization (LangChain RAG)
 # ==========================================
 try:
-    # 💡 针对可视化驱动的防掉线配置
+
     neo4j_driver = GraphDatabase.driver(
         NEO4J_URI, 
         auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-        keep_alive=True,               # 开启 TCP 心跳包，告诉云端“我还在，别踢我”
-        max_connection_lifetime=180    # 连接池里的线如果超过 3 分钟，强制丢弃换新线
+        keep_alive=True,              
+        max_connection_lifetime=180   
     )
 
-    # 💡 针对 LangChain 图谱查询的防掉线配置
-    # 注意：很多版本的 LangChain 支持把配置传给底层驱动，如果没有 timeout 也会尽量重试
+
     graph = Neo4jGraph(
         url=NEO4J_URI,
         username=NEO4J_USERNAME,
         password=NEO4J_PASSWORD,
         database=NEO4J_DATABASE_NAME
     )
-    # 如果你的 langchain 版本比较新，可以强制刷新一下 schema 唤醒它
     graph.refresh_schema()
     
     print("✅ LangChain Graph RAG connected successfully!")
@@ -95,7 +93,6 @@ def get_graph_chain(api_key: str, base_url: str):
         
     llm = ChatOpenAI(**llm_kwargs)
 
-# 🚀 更新后的规则（加入防多语句和防后处理机制）
     cypher_template = """You are a Neo4j Cypher expert. Convert the user's question into a Cypher query.
     Use only the provided schema. Do NOT wrap the Cypher query in markdown block formatting (e.g. ```cypher ... ```). 
     Just return the raw Cypher query string.
@@ -120,7 +117,6 @@ def get_graph_chain(api_key: str, base_url: str):
 
     Cypher query:"""
     cypher_prompt = PromptTemplate(template=cypher_template, input_variables=["schema", "question"])
-# 🚀 优化：QA Prompt (支持动态领域泛化与智能收敛)
     qa_template = """You are an authoritative environmental engineering and materials science expert.
     Please synthesize a highly professional, fluent English answer strictly based on the provided [Context] retrieved from the domain knowledge graph.
     
@@ -146,7 +142,6 @@ def get_graph_chain(api_key: str, base_url: str):
 
     Professional Answer:"""
     qa_prompt = PromptTemplate(template=qa_template, input_variables=["context", "question"])
-# 🚀 3. 将两个 Prompt 一起装载进 Chain
     kg_rag_chain = GraphCypherQAChain.from_llm(
         cypher_llm=llm,
         qa_llm=llm,
@@ -155,7 +150,7 @@ def get_graph_chain(api_key: str, base_url: str):
         cypher_prompt=cypher_prompt, 
         qa_prompt=qa_prompt,  
         allow_dangerous_requests=True,
-        top_k=100  # <--- 🔥 解除封印！允许向 QA 模型传递最多 100 条上下文！
+        top_k=100  
     )
     return kg_rag_chain
 # ==========================================
@@ -279,22 +274,16 @@ def generate_vis_subgraph_html(message, api_key, base_url):
 # 5. Q&A Function (🔥 Dynamic Thinking & Fault-Tolerant Architecture 🔥)
 # ==========================================
 def answer_question(message, history, api_key, base_url):
-    # 💡 1. 遍历并抓取整个对话历史，构建“全局记忆库”
     formatted_history = ""
     for msg in history:
         role = "User" if msg["role"] == "user" else "AI"
         content = msg["content"]
-        
-        # 💡 修复：增加容错判断，确保 content 是字符串才调用 .startswith()
         if isinstance(content, str):
-            # 过滤掉前端生成的系统加载状态文本（确保记忆纯净）
             if not content.startswith("🧠 [1/3]") and not content.startswith("📖 [2/3]") and not content.startswith("🌐 [3/3]"):
                 formatted_history += f"[{role}]: {content}\n\n"
         elif isinstance(content, (list, tuple)):
-            # 如果包含多模态文件或复杂格式，直接提取纯文本或做标记
             formatted_history += f"[{role}]: [多模态或文件内容]\n\n"
 
-    # 把当前问题追加进历史UI列表
     history.append({"role": "user", "content": message})
     
     if not api_key or not api_key.startswith("sk-"):
@@ -369,7 +358,6 @@ Professional Answer:"""
                     
                     local_answer = llm.invoke(judge_prompt).content.strip()
 
-                    # 💡 代码靠识别 "PASS" 来决定是否抛给维基百科
                     if local_answer.upper() != "PASS" and not local_answer.upper().startswith("PASS"):
                         final_answer = f"**📚 [Local DB] Answer formulated based on domain-specific literature:**\n\n{local_answer}"
                         local_hit = True
