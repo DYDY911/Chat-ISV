@@ -1,4 +1,4 @@
-# 🌿 Chat-ISV: Intelligent Q&A System for VOCs in the Iron and Steel Industry
+# 🌿 Chat-ISV: Intelligent Q & A System for VOCs in the Iron and Steel Industry
 
 [![Gradio](https://img.shields.io/badge/Gradio-6.9.0-blue?logo=gradio)](https://gradio.app)
 [![LangChain](https://img.shields.io/badge/LangChain-0.2.16-green?logo=langchain)](https://python.langchain.com)
