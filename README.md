@@ -243,3 +243,15 @@ Chat-ISV/
 
 ---
 
+### If you want to use this tool, please cite:
+```bibtex
+@misc{su2026traceableknowledgegraphreasoning,
+      title={Traceable Knowledge Graph Reasoning Enables LLM-Assisted Decision Support for Industrial VOCs in the Steel Industry}, 
+      author={Changqing Su and Yu Ding and Zuhong Lin and Hongyu Liu and Xi He and Zheng Zeng and Liqing Li},
+      year={2026},
+      eprint={2605.27071},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2605.27071}, 
+}
+```
